@@ -1,93 +1,43 @@
-use bevy::{prelude::*, sprite::collide_aabb::{collide, Collision}};
+use bevy::{input::mouse::MouseMotion,prelude::*};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_rapier3d::prelude::*;
 
-struct Player {
-    velocity: Vec2,
+fn main(){
+    App::new()
+    .add_plugins(DefaultPlugins)
+    .add_plugin(WorldInspectorPlugin::new())
+    .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+    .add_plugin(RapierDebugRenderPlugin::default())
+    .add_startup_system(start_camera)
+    .add_startup_system(setup_physics)
+    .add_system(mouse_motion)
+    .run();
+}
+fn setup_physics(mut commands: Commands) {
+    /* Create the ground. */
+    commands
+        .spawn(Collider::cuboid(100.0, 0.1, 100.0))
+        .insert(TransformBundle::from(Transform::from_xyz(0.0, -2.0, 0.0)));
+
+    /* Create the bouncing ball. */
+    commands
+        .spawn(RigidBody::Dynamic)
+        .insert(Collider::ball(0.5))
+        .insert(Restitution::coefficient(0.7))
+        .insert(TransformBundle::from(Transform::from_xyz(0.0, 4.0, 0.0)));
 }
 
-struct Enemy;
-
-fn main() {
-    App::build()
-        .add_plugins(DefaultPlugins)
-        .add_startup_system(setup.system())
-        .add_system(move_player.system())
-        .add_system(move_enemy.system())
-        .add_system(detect_collision.system())
-        .run();
-}
-
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // Load the sprite texture
-    let texture_handle = asset_server.load("sprite.png");
-
-    // Spawn the player sprite
-    commands.spawn_bundle(SpriteBundle {
-        material: materials::Texture::from(texture_handle),
-        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-        sprite: Sprite::new(Vec2::new(64.0, 64.0)),
-        ..Default::default()
-    })
-    .insert(Player { velocity: Vec2::new(0.0, 0.0) });
-
-    // Spawn the enemy sprite
-    commands.spawn_bundle(SpriteBundle {
-        material: materials::Texture::from(texture_handle),
-        transform: Transform::from_translation(Vec3::new(200.0, 0.0, 0.0)),
-        sprite: Sprite::new(Vec2::new(64.0, 64.0)),
-        ..Default::default()
-    })
-    .insert(Enemy);
-}
-
-fn move_player(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Player, With<Player>>,
+fn mouse_motion(
+    mut motion_evr: EventReader<MouseMotion>,
 ) {
-    for mut player in query.iter_mut() {
-        player.velocity = Vec2::new(0.0, 0.0);
-
-        if keyboard_input.pressed(KeyCode::Left) {
-            player.velocity.x -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::Right) {
-            player.velocity.x += 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::Down) {
-            player.velocity.y -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::Up) {
-            player.velocity.y += 1.0;
-        }
+    for ev in motion_evr.iter() {
+        println!("Mouse moved: X: {} px, Y: {} px", ev.delta.x, ev.delta.y);
     }
 }
 
-fn move_enemy(mut query: Query<&mut Transform, With<Enemy>>) {
-    for mut transform in query.iter_mut() {
-        transform.translation.x -= 2.0;
-    }
-}
-
-fn detect_collision(
-    mut commands: Commands,
-    mut player_query: Query<(Entity, &Transform, &Sprite, &Player), With<Player>>,
-    enemy_query: Query<(Entity, &Transform, &Sprite), With<Enemy>>,
-) {
-    for (player_entity, player_transform, player_sprite, player) in player_query.iter_mut() {
-        for (enemy_entity, enemy_transform, enemy_sprite) in enemy_query.iter() {
-            let collision = collide(
-                player_transform.translation,
-                player_sprite.size,
-                enemy_transform.translation,
-                enemy_sprite.size,
-            );
-
-            if let Some(collision) = collision {
-                commands.entity(player_entity).despawn();
-
-                commands.entity(enemy_entity).despawn();
-
-                println!("Collision detected! {:?}", collision);
-            }
-        }
-    }
+fn start_camera(mut commands: Commands) {
+    commands.spawn(Camera3dBundle{
+        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ..Default::default()
+    });
 }
