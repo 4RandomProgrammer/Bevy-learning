@@ -28,6 +28,8 @@ fn main() {
     .add_plugin(WorldInspectorPlugin::new())
     .add_startup_system(spawn_basic_scene)
     .add_startup_system(spawn_camera)
+
+    .add_system(tower_shooting)
     .run();
 }
 
@@ -57,7 +59,10 @@ fn spawn_basic_scene(
         transform: Transform::from_xyz(0.0, 0.5, 0.0),
         ..default()
     })
-    .insert(Name::new("Square"));
+    .insert(Tower {
+        shooting_timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+    })
+    .insert(Name::new("Tower"));
 
     commands.spawn(PointLightBundle{
         point_light: PointLight {
@@ -68,4 +73,32 @@ fn spawn_basic_scene(
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..Default::default()
     }).insert(Name::new("Luz"));
+}
+
+fn tower_shooting(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut towers: Query<&mut Tower>,
+) {
+    for mut tower in &mut towers {
+        tower.shooting_timer.tick(time.delta());
+        if tower.shooting_timer.just_finished() {
+            let spawn_transform = Transform::from_xyz(0.0, 0.7, 0.6).with_rotation(Quat::from_rotation_y( -PI / 2.0));
+
+            commands.spawn(PbrBundle{
+                mesh: meshes.add(Mesh::from(shape::Cube{size: 0.1})),
+                material: materials.add(Color::rgb(0.87,0.44,0.42).into()),
+                transform: spawn_transform,
+                ..Default::default()
+            })
+            .insert(Name::new("Bullet"));
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct Tower {
+    shooting_timer: Timer,
+
 }

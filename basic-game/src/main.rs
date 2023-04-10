@@ -9,31 +9,37 @@ fn main(){
     .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
     .add_plugin(RapierDebugRenderPlugin::default())
     .add_startup_system(start_camera)
-    .add_startup_system(setup_physics)
-    .add_system(mouse_motion)
+    .add_startup_system(init_system)
+    .add_system(update_system)
+    // .add_system(mouse_motion)
     .run();
 }
-fn setup_physics(mut commands: Commands) {
-    /* Create the ground. */
-    commands
-        .spawn(Collider::cuboid(100.0, 0.1, 100.0))
-        .insert(TransformBundle::from(Transform::from_xyz(0.0, -2.0, 0.0)));
 
-    /* Create the bouncing ball. */
-    commands
-        .spawn(RigidBody::Dynamic)
+fn init_system(mut commands: Commands){
+    commands.spawn(RigidBody::KinematicPositionBased)
         .insert(Collider::ball(0.5))
-        .insert(Restitution::coefficient(0.7))
-        .insert(TransformBundle::from(Transform::from_xyz(0.0, 4.0, 0.0)));
+        .insert(KinematicCharacterController::default());
 }
 
-fn mouse_motion(
-    mut motion_evr: EventReader<MouseMotion>,
-) {
-    for ev in motion_evr.iter() {
-        println!("Mouse moved: X: {} px, Y: {} px", ev.delta.x, ev.delta.y);
+fn update_system(mut controllers: Query<&mut KinematicCharacterController>){
+    for mut controler in controllers.iter_mut(){
+        controler.translation = Some(Vec3::new(1.0, -0.5, 1.0))
     }
 }
+
+fn read_result(controllers: Query<Entity, &KinematicCharacterControllerOutput>) {
+    for (entity, output) in controllers.iter() {
+        println!("Entity {:?} moved by {:?} and touches the ground: {:?}", entity, output.effective_translation, output.grounded)
+    }
+}
+
+// fn mouse_motion(
+//     mut motion_evr: EventReader<MouseMotion>,
+// ) {
+//     for ev in motion_evr.iter() {
+//         println!("Mouse moved: X: {} px, Y: {} px", ev.delta.x, ev.delta.y);
+//     }
+// }
 
 fn start_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle{
