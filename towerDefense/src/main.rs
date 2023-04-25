@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use std::f32::consts::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 pub const HEIGHT: f32 = 720.0;
@@ -43,8 +44,10 @@ fn spawn_camera(mut commands: Commands) {
 fn spawn_basic_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    ass: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>
 ) {
+
     //Qual a diferença entre plane{size} e plane.from_size
     commands.spawn(PbrBundle{
         mesh: meshes.add(shape::Plane::from_size(5.0).into()),
@@ -52,6 +55,13 @@ fn spawn_basic_scene(
         ..default()
     })
     .insert(Name::new("Ground"));
+
+    commands.spawn(SceneBundle{
+        scene: ass.load("assets/Tower.glb"),
+        transform: Transform::from_xyz(0.0, 0.5, 0.0),
+        ..Default::default()
+    })
+    .insert(Name::new("Torre"));
 
     commands.spawn(PbrBundle{
         mesh: meshes.add(Mesh::from(shape::Cube{size: 1.0})),
@@ -80,6 +90,7 @@ fn tower_shooting(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut towers: Query<&mut Tower>,
+    time: Res<Time>
 ) {
     for mut tower in &mut towers {
         tower.shooting_timer.tick(time.delta());
